@@ -1,0 +1,14 @@
+---
+- name: Installation
+  apt: name = {{ item }} update_cache=yes state=latest
+  with_items:
+    - git
+    - zsh
+    - vim
+    - htop
+    - apache2
+    - libapache2-mod-php
+    - php7.0
+    #on installe également les extensions de php
+    - php7.0-gd
+    - php-ssh2

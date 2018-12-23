@@ -1,19 +1,54 @@
 ---
 - hosts: web
   remote_user: root
+  vars:
+    http_port: 80
+    domain: trace.dev
 
-  roles:
-    - outils
-    - github
+  tasks:
 
+    #installation d apache
+    - name: Installation apache2 et GIT
+      apt: name={{ item }} update_cache=yes state=latest
+      with_items:
+        - apache2
+        - git
 
-  # tasks:
-  #
-  # - name: Envoi du clone GitHub
-  #   git: >
-  #     dest=var/www/cloud-projet
-  #     repo="https://github.com/baptistechampmartin/cloud-project/tree/master/site-php"
-  #     update=no
+    #On efface le module apache2 .
+    - name: Changement de apache2_module
+      apache2_module: name=rewrite state=present
+      notify:
+        - restart apache2 #on relance apache pour avoir la bonne config
 
+    #On a besoin de communiquer sur le port 80
+    - name: apache2 listen on port 8081
+      lineinfile: dest=/etc/apache2/ports.conf regexp="^Listen " line="Listen {{ http_port }}" state=present
+      notify:
+        - restart apache2
 
+    #La machine virtuel doit communiquer sur les memes ports que l'écoute
+    - name: apache2 virtualhost on port 8081
+      lineinfile: dest=/etc/apache2/sites-available/000-default.conf regexp="^<VirtualHost \*:" line="<VirtualHost *:{{ http_port }}>" state=present
+      notify:
+        - restart apache2
+
+    #Création d'un fichier virtuel
+    - name: create virtual host file
+      template: src=virtualhost.conf dest=/etc/apache2/sites-available/{{ domain }}.conf
+
+    #Permet de ne pas faire tourner le module plusieurs fois en meme temps
+    - name: "a2ensite {{ domain }}"
+      command: a2ensite {{ domain }}
+      args:
+        creates: /etc/apache2/sites-enabled/{{ domain }}.conf
+      notify:
+        - restart apache2
+
+    #Ajout de notre ficher git
+    - name: clone basic html template
+      git: repo=https://github.com/baptistechampmartin/cloud-project.git dest=/var/www/trace.dev update=no
+
+  handlers:
+    - name: restart apache2
+      service: name=apache2 state=restarted
 ...

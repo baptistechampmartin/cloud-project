@@ -1,0 +1,13 @@
+---
+- name: Download the install files
+  get_url: url='https://github.com/bcosca/fatfree/archive/master.zip' dest='/var/www/master.zip'
+  register: result
+
+- unarchive:
+    src: /var/www/master.zip
+    dest: /var/www/
+    remote_src: yes
+
+- copy:
+    src: ~/tdo/roles/install/files/index.php
+    dest: /var/www/html/index.php
